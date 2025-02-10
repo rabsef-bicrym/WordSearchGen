@@ -2,26 +2,159 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    /* ... (rest of the CSS variables) ... */
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    /* ... (rest of the dark mode CSS variables) ... */
   }
 }
 
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
 }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-8px);
+  }
+  75% {
+    transform: translateX(8px);
+  }
+}
+
+@keyframes flash {
+  0%,
+  100% {
+    background-color: var(--btn-bg);
+  }
+  50% {
+    background-color: rgb(239 68 68);
+  }
+}
+
+.shake-animation {
+  animation: shake 500ms ease-in-out;
+}
+
+.flash-animation {
+  animation: flash 500ms ease-in-out;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .print-container,
+  .print-container * {
+    visibility: visible;
+  }
+  .print-container {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+  .page {
+    page-break-after: always;
+    padding: 20px;
+  }
+  .word-list {
+    columns: 2;
+  }
+}
+
+@page {
+  size: auto;
+  margin: 0mm;
+}
+
+/* Add to globals.css */
+
+@media print {
+  /* Reset all margins and padding */
+  * {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Hide everything except print container */
+  body * {
+    visibility: hidden !important;
+  }
+  
+  .print-container,
+  .print-container * {
+    visibility: visible !important;
+  }
+  
+  .print-container {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+  }
+
+  /* Force background colors to print */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  /* Page settings for landscape */
+  @page {
+    size: landscape;
+    margin: 0;
+  }
+
+  /* Clean page breaks and landscape layout */
+  .wordsearch-page {
+    width: 11in !important;
+    height: 8.5in !important;
+    page-break-after: always !important;
+    page-break-inside: avoid !important;
+    position: relative !important;
+    padding: 0.5in !important;
+  }
+
+  /* Remove last page break to prevent blank page */
+  .wordsearch-page:last-child {
+    page-break-after: auto !important;
+  }
+
+  /* Enhance contrast for highlighted cells in teacher copy */
+  .teacher-copy [style*="background-color: rgb(191, 219, 254)"] {
+    background-color: #bfdbfe !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
+
+/* Screen preview enhancements */
+@media screen {
+  .print-container {
+    max-width: 11in;
+    margin: 0 auto;
+  }
+
+  .wordsearch-page {
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   }
 }
