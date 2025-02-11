@@ -1,9 +1,9 @@
-// wordsearch/components/WordManagement.tsx
+// components/WordManagement.tsx
 
 "use client"
 
 import type React from "react"
-import { useState, useCallback, Dispatch, SetStateAction } from "react"
+import { useState, useCallback, useRef, Dispatch, SetStateAction } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 
@@ -16,16 +16,18 @@ const WordManagement: React.FC<WordManagementProps> = ({ words, setWords }) => {
   const [newWord, setNewWord] = useState("")
   const [isShaking, setIsShaking] = useState(false)
   const [isButtonFlashing, setIsButtonFlashing] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const lastValidCursorPosition = useRef<number>(0)
 
-  const addWord = useCallback(() => {
-    const validateWord = (word: string): boolean => {
-      return /^[a-zA-Z]+$/.test(word)
-    }
+  const validateWord = (word: string): boolean => {
+    return /^[a-zA-Z]+$/.test(word)
+  }
 
-    const trimmedWord = newWord.trim()
+  const addWord = useCallback((wordToAdd: string) => {
+    const trimmedWord = wordToAdd.trim()
     if (trimmedWord && validateWord(trimmedWord)) {
       setWords(prev => [...prev, trimmedWord.toLowerCase()])
-      setNewWord("")
+      return true
     } else {
       // Trigger animations
       setIsShaking(true)
@@ -34,8 +36,65 @@ const WordManagement: React.FC<WordManagementProps> = ({ words, setWords }) => {
         setIsShaking(false)
         setIsButtonFlashing(false)
       }, 500)
+      return false
     }
-  }, [newWord, setWords])
+  }, [setWords])
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault()
+      if (newWord) {
+        const success = addWord(newWord)
+        if (success) {
+          setNewWord("")
+          lastValidCursorPosition.current = 0
+        }
+      }
+    } else {
+      // Update last valid cursor position if the key is a letter
+      if (/^[a-zA-Z]$/.test(e.key)) {
+        lastValidCursorPosition.current = (e.target as HTMLInputElement).selectionStart! + 1
+      }
+    }
+  }, [newWord, addWord])
+
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value
+    
+    // Handle paste events (which come through as longer inputs)
+    if (newValue.length > newWord.length + 1) {
+      const words = newValue.split(/\s+/).filter(w => w)
+      let addedAny = false
+      
+      words.forEach(word => {
+        if (validateWord(word)) {
+          addWord(word)
+          addedAny = true
+        }
+      })
+      
+      if (addedAny) {
+        setNewWord("")
+        lastValidCursorPosition.current = 0
+        return
+      }
+    }
+    
+    // For normal typing, only allow letters
+    if (/^[a-zA-Z]*$/.test(newValue)) {
+      setNewWord(newValue)
+      lastValidCursorPosition.current = e.target.selectionStart!
+    } else {
+      // If invalid input, revert to previous value and restore cursor
+      setNewWord(newWord)
+      requestAnimationFrame(() => {
+        if (inputRef.current) {
+          inputRef.current.selectionStart = lastValidCursorPosition.current
+          inputRef.current.selectionEnd = lastValidCursorPosition.current
+        }
+      })
+    }
+  }, [newWord, addWord])
 
   const removeWord = useCallback(
     (index: number) => {
@@ -49,14 +108,20 @@ const WordManagement: React.FC<WordManagementProps> = ({ words, setWords }) => {
       <h3 className="text-lg font-semibold">Word Management</h3>
       <div className="flex gap-2">
         <Input
+          ref={inputRef}
           value={newWord}
-          onChange={(e) => setNewWord(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && addWord()}
-          placeholder="Enter a vocabulary word (letters only)"
+          onChange={handleInputChange}
+          onKeyDown={handleKeyDown}
+          placeholder="Enter words (space or enter to add)"
           className={`flex-1 ${isShaking ? "shake-animation" : ""}`}
         />
         <Button
-          onClick={addWord}
+          onClick={() => {
+            if (addWord(newWord)) {
+              setNewWord("")
+              lastValidCursorPosition.current = 0
+            }
+          }}
           className={isButtonFlashing ? "flash-animation" : ""}
           style={{ "--btn-bg": "var(--background)" } as React.CSSProperties}
         >
